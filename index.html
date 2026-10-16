@@ -46,20 +46,16 @@ html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-a
   </div>
   <div id="sw"><svg class="si" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20.5 20.5"/></svg><input id="q" placeholder="ស្វែងរកសៀវភៅ..."><button class="cl" id="cl">✕</button></div>
   <div class="panel"><div id="items"></div></div>
-  <div class="ft">ទូរសព្ទ: <a href="tel:070225544">០៧០ ២២ ៥៥ ៤៤</a><br>អុីម៉ែល: <a href="mailto:pesethlyma@gmail.com">pesethlyma@gmail.com</a><br>២០២៦ / បណ្ដុំឯកសារវិស័យសង្គមកិច្ច<br><span id="st" style="font-size:13px;opacity:.7">ដំណើរការធម្មតា ✓</span></div>
+  <div class="ft">ទូរសព្ទ: <a href="tel:070225544">០៧០ ២២ ៥៥ ៤៤</a><br>អុីម៉ែល: <a href="mailto:pesethlyma@gmail.com">pesethlyma@gmail.com</a><br>២០២៦ / បណ្ដុំឯកសារវិស័យសង្គមកិច្ច<br><span id="st" style="font-size:13px;opacity:.7"></span></div>
 </div>
 <script>
+// ជំនួសតំណខាងក្រោមដោយ Google Sheet CSV Export Link របស់បង
+// ទម្រង់៖ https://docs.google.com/spreadsheets/d/ID_សន្លឹកកិច្ចការរបស់អ្នក/export?format=csv
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1_YOUR_SPREADSHEET_ID_HERE/export?format=csv";
+
 const TITLE="បណ្ដុំឯកសារវិស័យសង្គមកិច្ច";
 const DEFAULT_MAIN = ["លិខិតបទដ្ឋានគតិយុត្ត", "គោលនយោបាយ-ផែនការ", "បទដ្ឋាន", "សៀវភៅ", "ឯកសារសិក្សា", "លិខិត"];
 const LEGAL_SUBS = ["ច្បាប់", "ព្រះរាជក្រឹត្យ", "អនុក្រឹត្យ", "ប្រកាស", "សារាចរ", "សេចក្តីសម្រេច"];
-
-// ទិន្នន័យគំរូស្រាប់ (បងអាចកែបន្ថែម ឬតំណ PDF/រូបភាពនៅទីនេះបានយ៉ាងងាយស្រួល)
-const DEMO_DATA = `ថត,ឈ្មោះ,តំណ PDF,តំណរូបក្រប
-លិខិតបទដ្ឋានគតិយុត្ត/ច្បាប់,ច្បាប់ស្តីពីកិច្ចការពារកុមារ,https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf,
-លិខិតបទដ្ឋានគតិយុត្ត/អនុក្រឹត្យ,អនុក្រឹត្យស្តីពីជនមានពិការភាព,https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf,
-គោលនយោបាយ-ផែនការ,គោលនយោបាយជាតិស្តីពីមនុស្សចាស់,https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf,
-សៀវភៅ,សៀវភៅណែនាំការងារសង្គមកិច្ច,https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf,
-សៀវភៅ,របាយការណ៍បូកសរុបការងារប្រចាំឆ្នាំ,https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf`;
 
 const $=id=>document.getElementById(id);
 let root={name:"",folders:[],books:[],parent:null},cur=root,allBooks=[],filter="";
@@ -167,10 +163,21 @@ $("bk").onclick=()=>{if(cur.parent){cur=cur.parent;render()}};
 $("q").oninput=e=>{filter=e.target.value.trim().toLowerCase();render()};
 $("cl").onclick=()=>{$("q").value="";filter="";render();$("q").focus()};
 
-function init(){
+async function init(){
   $("hd").textContent=TITLE;
-  build(DEMO_DATA);
-  render();
+  $("items").innerHTML='<div class="empty">កំពុងទាញទិន្នន័យពី Google Sheet...</div>';
+  $("st").textContent="កំពុងភ្ជាប់...";
+  try{
+    const r = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?")?"&":"?") + "t=" + Date.now());
+    if(!r.ok) throw new Error("Network error");
+    const t = await r.text();
+    build(t);
+    render();
+    $("st").textContent="ធ្វើបច្ចុប្បន្នភាពជោគជ័យ ✓";
+  }catch(e){
+    $("st").textContent="មិនអាចទាញទិន្នន័យបាន";
+    $("items").innerHTML='<div class="empty">សូមពិនិត្យមើលតំណ Google Sheet CSV របស់អ្នក<br>ឬធានាថា Google Sheet ត្រូវបានដាក់សិទ្ធិសាធារណៈ (Anyone with the link can view)</div>';
+  }
 }
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
