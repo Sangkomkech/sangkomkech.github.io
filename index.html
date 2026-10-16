@@ -52,6 +52,7 @@ html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-a
 const DATA_URL="https://script.google.com/macros/s/AKfycbywT6EJPTFYyZfKETlE8qVHVWXyQbHyUW33bJhblpEV43CRIPuLaf91Sohl_tyV2T6gfQ/exec";
 const TITLE="បណ្ដុំឯកសារវិស័យសង្គមកិច្ច";
 const DEFAULT_MAIN = ["លិខិតបទដ្ឋានគតិយុត្ត", "គោលនយោបាយ-ផែនការ", "បទដ្ឋាន", "សៀវភៅ", "ឯកសារសិក្សា", "លិខិត"];
+const LEGAL_SUBS = ["ច្បាប់", "ព្រះរាជក្រឹត្យ", "អនុក្រឹត្យ", "ប្រកាស", "សារាចរ", "សេចក្តីសម្រេច"];
 
 const $=id=>document.getElementById(id);
 let root={name:"",folders:[],books:[],parent:null},cur=root,allBooks=[],filter="";
@@ -64,28 +65,41 @@ function cleanName(s){return s.replace(/^[០-៩0-9]+[\.\-]\s*/, '').trim()}
 function build(text){
   root={name:"",folders:[],books:[],parent:null};allBooks=[];
   
-  // បង្កើតថតមេទាំង ៦ ទុកជាមុន ធានាថាមិនបាត់
+  // បង្កើតថតមេទាំង ៦ នៅ Root ថេរ
+  const mainFoldersMap = {};
   DEFAULT_MAIN.forEach(mName => {
-    if(!root.folders.some(x=>x.name===mName)){
-      root.folders.push({name: mName, folders: [], books: [], parent: root});
+    const mFolder = {name: mName, folders: [], books: [], parent: root};
+    root.folders.push(mFolder);
+    mainFoldersMap[mName] = mFolder;
+    
+    // បង្កើតថតរងក្នុង លិខិតបទដ្ឋានគតិយុត្ត ទុកជាស្រេច
+    if(mName === "លិខិតបទដ្ឋានគតិយុត្ត"){
+      LEGAL_SUBS.forEach(subName => {
+        mFolder.folders.push({name: subName, folders: [], books: [], parent: mFolder});
+      });
     }
   });
 
   parseCSV(text).slice(1).forEach(r=>{
-    const rawPath=(r[0]||"").split("/").map(s=>s.trim()).filter(Boolean);
+    let rawPath = (r[0]||"").split("/").map(s=>cleanName(s)).filter(Boolean);
     if(rawPath.length === 0) return;
-    
-    let node=root;
+
+    // ប្រសិនបើក្នុង Google Sheet ដាក់ឈ្មោះថតរងឯកោ (ឧ. ប្រកាស ឬ អនុក្រឹត្យ) ឱ្យវាចូលទៅក្នុង លិខិតបទដ្ឋានគតិយុត្ត ស្វ័យប្រវត្តិ
+    if(rawPath.length === 1 && LEGAL_SUBS.includes(rawPath[0])){
+      rawPath = ["លិខិតបទដ្ឋានគតិយុត្ត", rawPath[0]];
+    }
+
+    let node = root;
     rawPath.forEach(p=>{
-      const cleanP=cleanName(p);
-      let f=node.folders.find(x=>x.name===cleanP);
+      let f = node.folders.find(x=>x.name === p);
       if(!f){
-        f={name:cleanP, folders:[], books:[], parent:node};
+        f = {name: p, folders: [], books: [], parent: node};
         node.folders.push(f);
       }
-      node=f;
+      node = f;
     });
-    const name=(r[1]||"").trim(),url=(r[2]||"").trim();
+
+    const name=(r[1]||"").trim(), url=(r[2]||"").trim();
     if(name&&url){
       const b={name,url,cover:coverUrl(r[3])};
       node.books.push(b);
@@ -138,8 +152,7 @@ async function init(){
   let text="";
   try{text=localStorage.getItem("csv")||""}catch(e){}
   
-  // បង្កើតទម្រង់ដើមភ្លាមៗទុកសិន
-  build(text || `ថត,ឈ្មោះ,តំណ PDF,តំណរូបក្រប\nលិខិតបទដ្ឋានគតិយុត្ត/ច្បាប់,,` + DEFAULT_MAIN.slice(1).map(m=>m+",,").join("\n"));
+  build(text);
   render();
 
   $("st").textContent="កំពុងធ្វើបច្ចុប្បន្នភាព...";
