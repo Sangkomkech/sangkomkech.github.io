@@ -51,8 +51,6 @@ html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-a
 <script>
 // ===== ដាក់តំណ Google Drive (Apps Script) ឬ Google Sheet (CSV) នៅទីនេះ =====
 const DATA_URL="https://script.google.com/macros/s/AKfycbywT6EJPTFYyZfKETlE8qVHVWXyQbHyUW33bJhblpEV43CRIPuLaf91Sohl_tyV2T6gfQ/exec";
-const API_KEY="";
-const ROOT_ID="1xoMjx6YHSKuWWqThorS5EfH_7A7svTKQ";
 // ================================================
 const TITLE="បណ្តុំឯកសារវិស័យសង្គមកិច្ច";
 const DEMO=`ថត,ឈ្មោះ,តំណ PDF,តំណរូបក្រប
@@ -83,9 +81,7 @@ function build(text){
   });
   cur=root;
 }
-function numOf(s){const m=(s||"").match(/^([0-9\u17E0-\u17E9]+)/);return m?parseInt(m[1].replace(/[\u17E0-\u17E9]/g,c=>c.charCodeAt(0)-0x17E0),10):1000}
-function cleanName(s){const c=(s||"").replace(/^[0-9\u17E0-\u17E9]+\s*[._\-)]*\s*/,"");return c||s}
-function conv(n,parent){const o={name:cleanName(n.name),folders:[],books:n.books||[],parent:parent};o.folders=(n.folders||[]).map((f,i)=>{const c=conv(f,o);c._n=numOf(f.name);c._i=i;return c}).sort((a,b)=>a._n-b._n||a._i-b._i);return o}
+function conv(n,parent){const o={name:n.name,folders:[],books:n.books||[],parent:parent};o.folders=(n.folders||[]).map(f=>conv(f,o));return o}
 function buildJSON(j){root=conv(j,null);allBooks=[];(function c(n){n.books.forEach(b=>allBooks.push(b));n.folders.forEach(c)})(root);cur=root}
 function ld(t){t=(t||"").trim();if(t[0]==="{")buildJSON(JSON.parse(t));else build(t)}
 function count(n){return n.books.length+n.folders.reduce((s,f)=>s+count(f),0)}
@@ -121,43 +117,17 @@ function render(){
 $("bk").onclick=()=>{if(cur.parent){cur=cur.parent;render()}};
 $("q").oninput=e=>{filter=e.target.value.trim().toLowerCase();render()};
 $("cl").onclick=()=>{$("q").value="";filter="";render();$("q").focus()};
-async function listFolder(id){
-  let files=[],tok="";
-  do{
-    const u="https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent("'"+id+"' in parents and trashed=false")+"&fields="+encodeURIComponent("nextPageToken,files(id,name,mimeType,createdTime)")+"&pageSize=1000&key="+API_KEY+(tok?"&pageToken="+tok:"");
-    const r=await fetch(u);
-    if(!r.ok)throw new Error("drive "+r.status);
-    const j=await r.json();
-    files=files.concat(j.files||[]);tok=j.nextPageToken||"";
-  }while(tok);
-  return files;
-}
-async function walkDrive(id,name){
-  const files=await listFolder(id);
-  const subs=files.filter(f=>f.mimeType==="application/vnd.google-apps.folder");
-  const pdfs=files.filter(f=>f.mimeType==="application/pdf");
-  const kids=await Promise.all(subs.map(f=>walkDrive(f.id,f.name).then(k=>{k._c=f.createdTime||"";return k})));
-  kids.sort((a,b)=>numOf(a.name)-numOf(b.name)||(a._c<b._c?-1:a._c>b._c?1:0));
-  pdfs.sort((a,b)=>(a.createdTime||"")<(b.createdTime||"")?1:-1);
-  return {name:name,folders:kids,books:pdfs.map(f=>({name:f.name.replace(/\.pdf$/i,""),url:"https://drive.google.com/file/d/"+f.id+"/view",cover:"https://drive.google.com/thumbnail?id="+f.id+"&sz=w400"}))};
-}
-async function getFresh(){
-  if(API_KEY){
-    try{return JSON.stringify(await walkDrive(ROOT_ID,""))}catch(e){if(!DATA_URL)throw e}
-  }
-  const ctl=new AbortController();setTimeout(()=>ctl.abort(),45000);
-  const r=await fetch(DATA_URL+(DATA_URL.includes("?")?"&":"?")+"t="+Date.now(),{signal:ctl.signal});
-  if(!r.ok)throw 0;
-  return await r.text();
-}
 async function init(){
   $("hd").textContent=TITLE;
-  if(!DATA_URL&&!API_KEY){ld(DEMO);render();return}
+  if(!DATA_URL){ld(DEMO);render();return}
   let text="";$("st").textContent="កំពុងធ្វើបច្ចុប្បន្នភាព...";
   try{text=localStorage.getItem("csv")||""}catch(e){}
   if(text){ld(text);render()}else{$("items").innerHTML='<div class="empty">កំពុងផ្ទុកបញ្ជីសៀវភៅ...<br>សូមរង់ចាំបន្តិច (ប្រហែល ១០ វិនាទី)</div>'}
   try{
-    const t=await getFresh();$("st").textContent="ធ្វើបច្ចុប្បន្នភាពរួច ✓";
+    const ctl=new AbortController();setTimeout(()=>ctl.abort(),45000);
+    const r=await fetch(DATA_URL+(DATA_URL.includes("?")?"&":"?")+"t="+Date.now(),{signal:ctl.signal});
+    if(!r.ok)throw 0;
+    const t=await r.text();$("st").textContent="ធ្វើបច្ចុប្បន្នភាពរួច ✓";
     if(t&&t!==text){ld(t);render();try{localStorage.setItem("csv",t)}catch(e){}}
   }catch(e){$("st").textContent="មិនអាចទាញទិន្នន័យថ្មី";if(!text){$("items").innerHTML='<div class="empty">មិនអាចផ្ទុកបញ្ជីសៀវភៅបានទេ<br>សូមពិនិត្យអ៊ីនធឺណិត<br><br><button onclick="location.reload()" style="background:#b8300f;color:#fff;border:0;border-radius:12px;padding:12px 22px;font-size:17px;font-family:inherit">ព្យាយាមម្តងទៀត</button></div>'}}
 }
