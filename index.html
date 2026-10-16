@@ -59,20 +59,26 @@ let root={name:"",folders:[],books:[],parent:null},cur=root,allBooks=[],filter="
 
 function parseCSV(t){const rows=[];let r=[],f="",q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==','){r.push(f);f=""}else if(c=='\n'){r.push(f);rows.push(r);r=[];f=""}else if(c!='\r')f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
 function gid(u){const m=u.match(/\/d\/([\w-]+)/)||u.match(/[?&]id=([\w-]+)/);return m?m[1]:""}
-function coverUrl(u){u=(u||"").trim();if(!u)return"";if(u.includes("drive.google.com")){const id=gid(u);return id?"https://drive.google.com/thumbnail?id="+id+"&sz=w400":u}return u}
+function coverUrl(u){
+  u=(u||"").trim();
+  if(!u)return"";
+  const id=gid(u);
+  if(id){
+    return "https://lh3.googleusercontent.com/d/" + id;
+  }
+  return u;
+}
 function cleanName(s){return s.replace(/^[០-៩0-9]+[\.\-]\s*/, '').trim()}
 
 function build(text){
   root={name:"",folders:[],books:[],parent:null};allBooks=[];
   
-  // បង្កើតថតមេទាំង ៦ នៅ Root ថេរ
   const mainFoldersMap = {};
   DEFAULT_MAIN.forEach(mName => {
     const mFolder = {name: mName, folders: [], books: [], parent: root};
     root.folders.push(mFolder);
     mainFoldersMap[mName] = mFolder;
     
-    // បង្កើតថតរងក្នុង លិខិតបទដ្ឋានគតិយុត្ត ទុកជាស្រេច
     if(mName === "លិខិតបទដ្ឋានគតិយុត្ត"){
       LEGAL_SUBS.forEach(subName => {
         mFolder.folders.push({name: subName, folders: [], books: [], parent: mFolder});
@@ -84,7 +90,6 @@ function build(text){
     let rawPath = (r[0]||"").split("/").map(s=>cleanName(s)).filter(Boolean);
     if(rawPath.length === 0) return;
 
-    // ប្រសិនបើក្នុង Google Sheet ដាក់ឈ្មោះថតរងឯកោ (ឧ. ប្រកាស ឬ អនុក្រឹត្យ) ឱ្យវាចូលទៅក្នុង លិខិតបទដ្ឋានគតិយុត្ត ស្វ័យប្រវត្តិ
     if(rawPath.length === 1 && LEGAL_SUBS.includes(rawPath[0])){
       rawPath = ["លិខិតបទដ្ឋានគតិយុត្ត", rawPath[0]];
     }
@@ -132,7 +137,15 @@ function render(){
     books.slice(i,i+2).forEach(b=>{
       const c=document.createElement("div");c.className="bk";
       const cv=document.createElement("div");cv.className="bcov";
-      if(b.cover){const im=document.createElement("img");im.src=b.cover;im.alt="";im.onerror=()=>{im.remove();cv.textContent="PDF"};cv.appendChild(im)}else cv.textContent="PDF";
+      if(b.cover){
+        const im=document.createElement("img");
+        im.src=b.cover;
+        im.alt="";
+        im.onerror=()=>{im.remove();cv.textContent="PDF"};
+        cv.appendChild(im);
+      }else{
+        cv.textContent="PDF";
+      }
       const nm=document.createElement("div");nm.className="bnm";nm.textContent=b.name;
       c.append(cv,nm);
       c.onclick=()=>{const a=document.createElement("a");a.href=b.url;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()};
