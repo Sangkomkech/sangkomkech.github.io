@@ -1,4 +1,4 @@
-const CACHE = "library-v1";
+const CACHE = "library-v2";
 const SHELL = ["./", "./index.html", "./icon-192.png"];
 
 self.addEventListener("install", e => {
