@@ -59,7 +59,6 @@ let root={name:"",folders:[],books:[],parent:null},cur=root,allBooks=[],filter="
 
 function parseCSV(t){const rows=[];let r=[],f="",q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==','){r.push(f);f=""}else if(c=='\n'){r.push(f);rows.push(r);r=[];f=""}else if(c!='\r')f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
 function gid(u){const m=u.match(/\/d\/([\w-]+)/)||u.match(/[?&]id=([\w-]+)/);return m?m[1]:""}
-
 function coverUrl(u){
   u=(u||"").trim();
   if(!u)return"";
@@ -69,7 +68,6 @@ function coverUrl(u){
   }
   return u;
 }
-
 function cleanName(s){return s.replace(/^[០-៩0-9]+[\.\-]\s*/, '').trim()}
 
 function build(text){
@@ -164,26 +162,22 @@ $("cl").onclick=()=>{$("q").value="";filter="";render();$("q").focus()};
 
 async function init(){
   $("hd").textContent=TITLE;
-  let text="";
-  try{text=localStorage.getItem("csv")||""}catch(e){}
-  
-  build(text);
-  render();
-
-  $("st").textContent="កំពុងធ្វើបច្ចុប្បន្នភាព...";
+  $("items").innerHTML='<div class="empty">កំពុងទាញទិន្នន័យថ្មីពី Google Sheet...<br>សូមរង់ចាំបន្តិច</div>';
+  $("st").textContent="កំពុងភ្ជាប់...";
   try{
-    const ctl=new AbortController();setTimeout(()=>ctl.abort(),15000);
-    const r=await fetch(DATA_URL+(DATA_URL.includes("?")?"&":"?")+"t="+Date.now(),{signal:ctl.signal});
-    if(!r.ok)throw 0;
+    const r=await fetch(DATA_URL+(DATA_URL.includes("?")?"&":"?")+"t="+Date.now());
+    if(!r.ok)throw new Error("Network error");
     const t=await r.text();
-    if(t&&t.length>10){
+    if(t && t.length > 10){
       build(t);
       render();
-      $("st").textContent="ធ្វើបច្ចុប្បន្នភាពរួច ✓";
-      try{localStorage.setItem("csv",t)}catch(e){}
-    }else{throw 0;}
+      $("st").textContent="ទាញទិន្នន័យថ្មីជោគជ័យ ✓";
+    }else{
+      throw new Error("Empty data");
+    }
   }catch(e){
-    $("st").textContent="ប្រើទម្រង់ទិន្នន័យរក្សាទុក";
+    $("st").textContent="បរាជ័យក្នុងការទាញទិន្នន័យ";
+    $("items").innerHTML='<div class="empty">មិនអាចទាញទិន្នន័យពី Google Sheet បានទេ<br>សូមពិនិត្យការតភ្ជាប់អ៊ីនធឺណិត ឬសិទ្ធិ Apps Script<br><br><button onclick="location.reload()" style="background:#b8300f;color:#fff;border:0;border-radius:12px;padding:12px 22px;font-size:17px;font-family:inherit;cursor:pointer">ព្យាយាមម្តងទៀត</button></div>';
   }
 }
 
