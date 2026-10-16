@@ -76,7 +76,6 @@
             font-size: 16px;
             font-weight: bold;
         }
-        /* Doc Card style for PDF view */
         .doc-card {
             background-color: #8b0000;
             border-radius: 12px;
@@ -88,17 +87,19 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             text-decoration: none;
             color: white;
+            margin-bottom: 12px;
         }
         .doc-thumb {
-            width: 50px;
-            height: 65px;
+            width: 55px;
+            height: 70px;
             background-color: #fff;
-            border-radius: 4px;
+            border-radius: 6px;
             display: flex;
             justify-content: center;
             align-items: center;
             flex-shrink: 0;
             overflow: hidden;
+            padding: 2px;
         }
         .doc-thumb img {
             width: 100%;
@@ -140,7 +141,7 @@
     <div id="app"></div>
 
     <script>
-        // ទិន្នន័យស្រដៀងបេះបិតនឹងវេបសាយដើមរបស់បង
+        // ទិន្នន័យដូចបេះបិតតាមវេបសាយដើមក្នុងវីដេអូ
         const db = {
             main: [
                 { id: "legal", title: "លិខិតបទដ្ឋានគតិយុត្ត", count: 0, type: "sub" },
@@ -151,32 +152,41 @@
                     type: "docs",
                     docs: [
                         { 
-                            title: "គោលនយោបាយ_ស្តីពី_ការគ្រប់គ្រង_និងការោះស្រាយ_បញ្ហាជនអនាថា", 
-                            link: "#", // បងអាចដាក់តំណរ Link ឯកសារ PDF របស់បងទីនេះ
-                            thumb: "" 
+                            title: "គោលនយោបាយ_ស្តីពី_ការគ្រប់គ្រង_និងការោះស្រាយ_បញ្ហាជនអនាថា ឆ្នាំ២០២៦", 
+                            link: "#" // បងអាចជំនួសតំណរ Link ឯកសារ PDF របស់បងនៅទីនេះ
                         }
                     ]
                 },
-                { id: "regulation", title: "បទដ្ឋាន", count: 1, type: "docs", docs: [] },
+                { 
+                    id: "regulation", 
+                    title: "បទដ្ឋាន", 
+                    count: 1, 
+                    type: "docs",
+                    docs: [
+                        { 
+                            title: "បទដ្ឋានស្តីពីការអនុវត្តការងារសង្គមកិច្ច", 
+                            link: "#" 
+                        }
+                    ]
+                },
                 { id: "books", title: "សៀវភៅ", count: 0, type: "docs", docs: [] },
                 { id: "study", title: "ឯកសារសិក្សា", count: 0, type: "docs", docs: [] },
                 { id: "letters", title: "លិខិត", count: 0, type: "docs", docs: [] }
             ],
             sub: {
                 legal: [
-                    { title: "ច្បាប់", count: 0, docs: [] },
-                    { title: "ព្រះរាជក្រឹត្យ", count: 0, docs: [] },
-                    { title: "អនុក្រឹត្យ", count: 0, docs: [] },
-                    { title: "ប្រកាស", count: 0, docs: [] },
-                    { title: "សារាចរ", count: 0, docs: [] },
-                    { title: "សេចក្តីសម្រេច", count: 0, docs: [] }
+                    { title: "ច្បាប់", count: 0 },
+                    { title: "ព្រះរាជក្រឹត្យ", count: 0 },
+                    { title: "អនុក្រឹត្យ", count: 0 },
+                    { title: "ប្រកាស", count: 0 },
+                    { title: "សារាចរ", count: 0 },
+                    { title: "សេចក្តីសម្រេច", count: 0 }
                 ]
             }
         };
 
         let currentView = 'main'; // 'main', 'sub', 'docs'
         let currentTitle = 'បណ្ដុំឯកសារវិស័យសង្គមកិច្ច';
-        let currentSubKey = null;
         let activeDocs = [];
         let searchQuery = '';
 
@@ -197,7 +207,7 @@
                 const filtered = db.main.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()));
                 
                 if (filtered.length === 0) {
-                    html += `<div class="no-result">មិនមានឯកសារស្វែងរក</div>`;
+                    html += `<div class="no-result">មិនមានឯកសារ</div>`;
                 } else {
                     filtered.forEach(item => {
                         html += `
@@ -211,7 +221,7 @@
 
                 html += `</div>`;
             } else if (currentView === 'sub') {
-                const subItems = db.sub[currentSubKey] || [];
+                const subItems = db.sub['legal'] || [];
 
                 html += `
                     <button class="back-btn" onclick="goBack()">
@@ -232,7 +242,7 @@
                 } else {
                     filteredSub.forEach(item => {
                         html += `
-                            <div class="card" onclick="openDocListForSub('${item.title}')">
+                            <div class="card" onclick="openSubDetail('${item.title}')">
                                 <span>${item.title}</span>
                                 <span>${item.count}</span>
                             </div>
@@ -293,7 +303,6 @@
             currentTitle = item.title;
             if (type === 'sub') {
                 currentView = 'sub';
-                currentSubKey = id;
             } else if (type === 'docs') {
                 currentView = 'docs';
                 activeDocs = item.docs;
@@ -301,22 +310,21 @@
             render();
         }
 
-        function openDocListForSub(subTitle) {
+        function openSubDetail(title) {
             searchQuery = '';
-            currentTitle = subTitle;
+            currentTitle = title;
             currentView = 'docs';
-            activeDocs = []; // មិនទាន់មានឯកសារបង្ហាញ "មិនមានឯកសារ" ដូចក្នុងវីដេអូ
+            activeDocs = []; // បង្ហាញ "មិនមានឯកសារ" ដូចក្នុងវីដេអូពេលចុចលើ ច្បាប់, ព្រះរាជក្រឹត្យ...
             render();
         }
 
         function goBack() {
             searchQuery = '';
-            if (currentView === 'docs' && currentSubKey) {
+            if (currentView === 'docs' && db.sub['legal'].some(s => s.title === currentTitle)) {
                 currentView = 'sub';
                 currentTitle = 'លិខិតបទដ្ឋានគតិយុត្ត';
             } else {
                 currentView = 'main';
-                currentSubKey = null;
                 currentTitle = 'បណ្ដុំឯកសារវិស័យសង្គមកិច្ច';
             }
             render();
