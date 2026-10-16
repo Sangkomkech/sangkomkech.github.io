@@ -59,15 +59,17 @@ let root={name:"",folders:[],books:[],parent:null},cur=root,allBooks=[],filter="
 
 function parseCSV(t){const rows=[];let r=[],f="",q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==','){r.push(f);f=""}else if(c=='\n'){r.push(f);rows.push(r);r=[];f=""}else if(c!='\r')f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
 function gid(u){const m=u.match(/\/d\/([\w-]+)/)||u.match(/[?&]id=([\w-]+)/);return m?m[1]:""}
+
 function coverUrl(u){
   u=(u||"").trim();
   if(!u)return"";
   const id=gid(u);
   if(id){
-    return "https://lh3.googleusercontent.com/d/" + id;
+    return "https://drive.google.com/thumbnail?id=" + id + "&sz=w400";
   }
   return u;
 }
+
 function cleanName(s){return s.replace(/^[០-៩0-9]+[\.\-]\s*/, '').trim()}
 
 function build(text){
