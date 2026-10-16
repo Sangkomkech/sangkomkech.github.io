@@ -51,44 +51,52 @@ html,body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-a
 <script>
 const DATA_URL="https://script.google.com/macros/s/AKfycbywT6EJPTFYyZfKETlE8qVHVWXyQbHyUW33bJhblpEV43CRIPuLaf91Sohl_tyV2T6gfQ/exec";
 const TITLE="បណ្ដុំឯកសារវិស័យសង្គមកិច្ច";
-const DEMO=`ថត,ឈ្មោះ,តំណ PDF,តំណរូបក្រប
-លិខិតបទដ្ឋានគតិយុត្ត/ច្បាប់,,,
-លិខិតបទដ្ឋានគតិយុត្ត/ព្រះរាជក្រឹត្យ,,,
-លិខិតបទដ្ឋានគតិយុត្ត/អនុក្រឹត្យ,,,
-លិខិតបទដ្ឋានគតិយុត្ត/ប្រកាស,,,
-លិខិតបទដ្ឋានគតិយុត្ត/សារាចរ,,,
-លិខិតបទដ្ឋានគតិយុត្ត/សេចក្តីសម្រេច,,,
-គោលនយោបាយ-ផែនការ,,,
-បទដ្ឋាន,,,
-សៀវភៅ,,,
-ឯកសារសិក្សា,,,
-លិខិត,,,`;
+const DEFAULT_MAIN = ["លិខិតបទដ្ឋានគតិយុត្ត", "គោលនយោបាយ-ផែនការ", "បទដ្ឋាន", "សៀវភៅ", "ឯកសារសិក្សា", "លិខិត"];
+
 const $=id=>document.getElementById(id);
 let root={name:"",folders:[],books:[],parent:null},cur=root,allBooks=[],filter="";
+
 function parseCSV(t){const rows=[];let r=[],f="",q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==','){r.push(f);f=""}else if(c=='\n'){r.push(f);rows.push(r);r=[];f=""}else if(c!='\r')f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
 function gid(u){const m=u.match(/\/d\/([\w-]+)/)||u.match(/[?&]id=([\w-]+)/);return m?m[1]:""}
 function coverUrl(u){u=(u||"").trim();if(!u)return"";if(u.includes("drive.google.com")){const id=gid(u);return id?"https://drive.google.com/thumbnail?id="+id+"&sz=w400":u}return u}
 function cleanName(s){return s.replace(/^[០-៩0-9]+[\.\-]\s*/, '').trim()}
+
 function build(text){
   root={name:"",folders:[],books:[],parent:null};allBooks=[];
+  
+  // បង្កើតថតមេទាំង ៦ ទុកជាមុន ធានាថាមិនបាត់
+  DEFAULT_MAIN.forEach(mName => {
+    if(!root.folders.some(x=>x.name===mName)){
+      root.folders.push({name: mName, folders: [], books: [], parent: root});
+    }
+  });
+
   parseCSV(text).slice(1).forEach(r=>{
     const rawPath=(r[0]||"").split("/").map(s=>s.trim()).filter(Boolean);
+    if(rawPath.length === 0) return;
+    
     let node=root;
     rawPath.forEach(p=>{
       const cleanP=cleanName(p);
       let f=node.folders.find(x=>x.name===cleanP);
-      if(!f){f={name:cleanP,folders:[],books:[],parent:node};node.folders.push(f)}
+      if(!f){
+        f={name:cleanP, folders:[], books:[], parent:node};
+        node.folders.push(f);
+      }
       node=f;
     });
     const name=(r[1]||"").trim(),url=(r[2]||"").trim();
-    if(name&&url){const b={name,url,cover:coverUrl(r[3])};node.books.push(b);allBooks.push(b)}
+    if(name&&url){
+      const b={name,url,cover:coverUrl(r[3])};
+      node.books.push(b);
+      allBooks.push(b);
+    }
   });
   cur=root;
 }
-function conv(n,parent){const o={name:cleanName(n.name),folders:[],books:n.books||[],parent:parent};o.folders=(n.folders||[]).map(f=>conv(f,o));return o}
-function buildJSON(j){root=conv(j,null);allBooks=[];(function c(n){n.books.forEach(b=>allBooks.push(b));n.folders.forEach(c)})(root);cur=root}
-function ld(t){t=(t.trim()[0]==="{")?buildJSON(JSON.parse(t)):build(t)}
+
 function count(n){return n.books.length+n.folders.reduce((s,f)=>s+count(f),0)}
+
 function render(){
   $("hd").textContent=cur===root?TITLE:cur.name;
   $("bk").style.visibility=(cur!==root&&!filter)?"visible":"hidden";
@@ -96,6 +104,7 @@ function render(){
   let folders=cur.folders,books=cur.books;
   if(filter){folders=[];books=allBooks.filter(b=>b.name.toLowerCase().includes(filter))}
   if(!folders.length&&!books.length){box.innerHTML='<div class="empty">'+(filter?'រកមិនឃើញ':'មិនទាន់មានសៀវភៅ')+'</div>';return}
+  
   folders.forEach(f=>{
     const d=document.createElement("div");d.className="it";
     d.innerHTML='<div class="n"></div><div class="c">'+count(f)+'</div>';
@@ -103,6 +112,7 @@ function render(){
     d.onclick=()=>{cur=f;render();scrollTo(0,0)};
     box.appendChild(d);
   });
+
   for(let i=0;i<books.length;i+=2){
     const row=document.createElement("div");row.className="brow";
     books.slice(i,i+2).forEach(b=>{
@@ -118,23 +128,37 @@ function render(){
     const bar=document.createElement("div");bar.className="bar";box.appendChild(bar);
   }
 }
+
 $("bk").onclick=()=>{if(cur.parent){cur=cur.parent;render()}};
 $("q").oninput=e=>{filter=e.target.value.trim().toLowerCase();render()};
 $("cl").onclick=()=>{$("q").value="";filter="";render();$("q").focus()};
+
 async function init(){
   $("hd").textContent=TITLE;
-  if(!DATA_URL){ld(DEMO);render();return}
-  let text="";$("st").textContent="កំពុងធ្វើបច្ចុប្បន្នភាព...";
+  let text="";
   try{text=localStorage.getItem("csv")||""}catch(e){}
-  if(text){ld(text);render()}else{$("items").innerHTML='<div class="empty">កំពុងផ្ទុកបញ្ជីសៀវភៅ...<br>សូមរង់ចាំបន្តិច</div>'}
+  
+  // បង្កើតទម្រង់ដើមភ្លាមៗទុកសិន
+  build(text || `ថត,ឈ្មោះ,តំណ PDF,តំណរូបក្រប\nលិខិតបទដ្ឋានគតិយុត្ត/ច្បាប់,,` + DEFAULT_MAIN.slice(1).map(m=>m+",,").join("\n"));
+  render();
+
+  $("st").textContent="កំពុងធ្វើបច្ចុប្បន្នភាព...";
   try{
-    const ctl=new AbortController();setTimeout(()=>ctl.abort(),45000);
+    const ctl=new AbortController();setTimeout(()=>ctl.abort(),15000);
     const r=await fetch(DATA_URL+(DATA_URL.includes("?")?"&":"?")+"t="+Date.now(),{signal:ctl.signal});
     if(!r.ok)throw 0;
-    const t=await r.text();$("st").textContent="ធ្វើបច្ចុប្បន្នភាពរួច ✓";
-    if(t&&t!==text){ld(t);render();try{localStorage.setItem("csv",t)}catch(e){}}
-  }catch(e){$("st").textContent="មិនអាចទាញទិន្នន័យថ្មី";if(!text){$("items").innerHTML='<div class="empty">មិនអាចផ្ទុកបញ្ជីសៀវភៅបានទេ<br>សូមពិនិត្យអ៊ីនធឺណិត<br><br><button onclick="location.reload()" style="background:#b8300f;color:#fff;border:0;border-radius:12px;padding:12px 22px;font-size:17px;font-family:inherit">ព្យាយាមម្តងទៀត</button></div>'}}
+    const t=await r.text();
+    if(t&&t.length>10){
+      build(t);
+      render();
+      $("st").textContent="ធ្វើបច្ចុប្បន្នភាពរួច ✓";
+      try{localStorage.setItem("csv",t)}catch(e){}
+    }else{throw 0;}
+  }catch(e){
+    $("st").textContent="ប្រើទម្រង់ទិន្នន័យរក្សាទុក";
+  }
 }
+
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 init();
 </script>
