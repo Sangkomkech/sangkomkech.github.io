@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>បញ្ជីកនសារិស្ស័យសង្គមកិច្ច</title>
+    <title>បណ្ដុំឯកសារវិស័យសង្គមកិច្ច</title>
     <style>
         body {
             background-color: #6a040f;
@@ -76,6 +76,45 @@
             font-size: 16px;
             font-weight: bold;
         }
+        /* Doc Card style for PDF view */
+        .doc-card {
+            background-color: #8b0000;
+            border-radius: 12px;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            text-decoration: none;
+            color: white;
+        }
+        .doc-thumb {
+            width: 50px;
+            height: 65px;
+            background-color: #fff;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .doc-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .doc-title {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .no-result {
+            text-align: center;
+            color: #ffcccc;
+            margin-top: 40px;
+            font-size: 15px;
+        }
         .back-btn {
             background: none;
             border: none;
@@ -101,30 +140,44 @@
     <div id="app"></div>
 
     <script>
-        // ទិន្នន័យស្រាប់ក្នុងកូដ មិនបាច់ពឹងផ្អែកលើဖាយ JSON ខាងក្រៅទៀតទេ
+        // ទិន្នន័យស្រដៀងបេះបិតនឹងវេបសាយដើមរបស់បង
         const db = {
             main: [
-                { id: "legal", title: "លិខិតបទដ្ឋានគតិយុត្ត", count: 0, hasSub: true },
-                { id: "policy", title: "គោលនយោបាយ-ផែនការ", count: 1, hasSub: false },
-                { id: "regulation", title: "បទដ្ឋាន", count: 1, hasSub: false },
-                { id: "books", title: "សៀវភៅ", count: 0, hasSub: false },
-                { id: "study", title: "ឯកសារសិក្សា", count: 0, hasSub: false },
-                { id: "letters", title: "លិខិត", count: 0, hasSub: false }
+                { id: "legal", title: "លិខិតបទដ្ឋានគតិយុត្ត", count: 0, type: "sub" },
+                { 
+                    id: "policy", 
+                    title: "គោលនយោបាយ-ផែនការ", 
+                    count: 1, 
+                    type: "docs",
+                    docs: [
+                        { 
+                            title: "គោលនយោបាយ_ស្តីពី_ការគ្រប់គ្រង_និងការោះស្រាយ_បញ្ហាជនអនាថា", 
+                            link: "#", // បងអាចដាក់តំណរ Link ឯកសារ PDF របស់បងទីនេះ
+                            thumb: "" 
+                        }
+                    ]
+                },
+                { id: "regulation", title: "បទដ្ឋាន", count: 1, type: "docs", docs: [] },
+                { id: "books", title: "សៀវភៅ", count: 0, type: "docs", docs: [] },
+                { id: "study", title: "ឯកសារសិក្សា", count: 0, type: "docs", docs: [] },
+                { id: "letters", title: "លិខិត", count: 0, type: "docs", docs: [] }
             ],
             sub: {
                 legal: [
-                    { title: "ច្បាប់", count: 0 },
-                    { title: "ព្រះរាជក្រឹត្យ", count: 0 },
-                    { title: "អនុក្រឹត្យ", count: 0 },
-                    { title: "ប្រកាស", count: 0 },
-                    { title: "សារាចរ", count: 0 },
-                    { title: "សេចក្តីសម្រេច", count: 0 }
+                    { title: "ច្បាប់", count: 0, docs: [] },
+                    { title: "ព្រះរាជក្រឹត្យ", count: 0, docs: [] },
+                    { title: "អនុក្រឹត្យ", count: 0, docs: [] },
+                    { title: "ប្រកាស", count: 0, docs: [] },
+                    { title: "សារាចរ", count: 0, docs: [] },
+                    { title: "សេចក្តីសម្រេច", count: 0, docs: [] }
                 ]
             }
         };
 
-        let currentView = 'main';
+        let currentView = 'main'; // 'main', 'sub', 'docs'
+        let currentTitle = 'បណ្ដុំឯកសារវិស័យសង្គមកិច្ច';
         let currentSubKey = null;
+        let activeDocs = [];
         let searchQuery = '';
 
         function render() {
@@ -133,7 +186,7 @@
 
             if (currentView === 'main') {
                 html += `
-                    <h1>បញ្ជីកនសារិស្ស័យសង្គមកិច្ច</h1>
+                    <h1>បណ្ដុំឯកសារវិស័យសង្គមកិច្ច</h1>
                     <div class="search-box">
                         <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                         <input type="text" id="searchInput" placeholder="ស្វែងរកសៀវភៅ..." value="${searchQuery}" oninput="handleSearch(event)">
@@ -143,26 +196,28 @@
 
                 const filtered = db.main.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()));
                 
-                filtered.forEach(item => {
-                    html += `
-                        <div class="card" onclick="handleCardClick('${item.id}', ${item.hasSub})">
-                            <span>${item.title}</span>
-                            <span>${item.count}</span>
-                        </div>
-                    `;
-                });
+                if (filtered.length === 0) {
+                    html += `<div class="no-result">មិនមានឯកសារស្វែងរក</div>`;
+                } else {
+                    filtered.forEach(item => {
+                        html += `
+                            <div class="card" onclick="handleCardClick('${item.id}', '${item.type}')">
+                                <span>${item.title}</span>
+                                <span>${item.count}</span>
+                            </div>
+                        `;
+                    });
+                }
 
                 html += `</div>`;
             } else if (currentView === 'sub') {
                 const subItems = db.sub[currentSubKey] || [];
-                const parentItem = db.main.find(m => m.id === currentSubKey);
-                const title = parentItem ? parentItem.title : 'លិខិតបទដ្ឋានគតិយុត្ត';
 
                 html += `
                     <button class="back-btn" onclick="goBack()">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
                     </button>
-                    <h1>${title}</h1>
+                    <h1>${currentTitle}</h1>
                     <div class="search-box">
                         <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                         <input type="text" id="searchInput" placeholder="ស្វែងរកសៀវភៅ..." value="${searchQuery}" oninput="handleSearch(event)">
@@ -172,14 +227,49 @@
 
                 const filteredSub = subItems.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
-                filteredSub.forEach(item => {
-                    html += `
-                        <div class="card">
-                            <span>${item.title}</span>
-                            <span>${item.count}</span>
-                        </div>
-                    `;
-                });
+                if (filteredSub.length === 0) {
+                    html += `<div class="no-result">មិនមានឯកសារ</div>`;
+                } else {
+                    filteredSub.forEach(item => {
+                        html += `
+                            <div class="card" onclick="openDocListForSub('${item.title}')">
+                                <span>${item.title}</span>
+                                <span>${item.count}</span>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div>`;
+            } else if (currentView === 'docs') {
+                html += `
+                    <button class="back-btn" onclick="goBack()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    </button>
+                    <h1>${currentTitle}</h1>
+                    <div class="search-box">
+                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <input type="text" id="searchInput" placeholder="ស្វែងរកសៀវភៅ..." value="${searchQuery}" oninput="handleSearch(event)">
+                    </div>
+                    <div class="card-list">
+                `;
+
+                const filteredDocs = activeDocs.filter(doc => doc.title.toLowerCase().includes(searchQuery.toLowerCase()));
+
+                if (filteredDocs.length === 0) {
+                    html += `<div class="no-result">មិនមានឯកសារ</div>`;
+                } else {
+                    filteredDocs.forEach(doc => {
+                        html += `
+                            <a href="${doc.link}" class="doc-card" target="_blank">
+                                <div class="doc-thumb">
+                                    <svg viewBox="0 0 24 24" width="30" height="30" fill="#8b0000"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                                </div>
+                                <div class="doc-title">${doc.title}</div>
+                            </a>
+                        `;
+                    });
+                }
 
                 html += `</div>`;
             }
@@ -188,26 +278,47 @@
                 <footer>
                     ទូរសព្ទ៖ ០៧០ ២២ ៥៥ ៤៤<br>
                     អ៊ីមែល៖ pesethlyma@gmail.com<br>
-                    ២០២៦ / បញ្ជីកនសារិស្ស័យសង្គមកិច្ច
+                    ២០២៦ / បណ្ដុំឯកសារវិស័យសង្គមកិច្ច
                 </footer>
             `;
 
             app.innerHTML = html;
         }
 
-        function handleCardClick(id, hasSub) {
-            if (hasSub) {
+        function handleCardClick(id, type) {
+            searchQuery = '';
+            const item = db.main.find(m => m.id === id);
+            if (!item) return;
+
+            currentTitle = item.title;
+            if (type === 'sub') {
                 currentView = 'sub';
                 currentSubKey = id;
-                searchQuery = '';
-                render();
+            } else if (type === 'docs') {
+                currentView = 'docs';
+                activeDocs = item.docs;
             }
+            render();
+        }
+
+        function openDocListForSub(subTitle) {
+            searchQuery = '';
+            currentTitle = subTitle;
+            currentView = 'docs';
+            activeDocs = []; // មិនទាន់មានឯកសារបង្ហាញ "មិនមានឯកសារ" ដូចក្នុងវីដេអូ
+            render();
         }
 
         function goBack() {
-            currentView = 'main';
-            currentSubKey = null;
             searchQuery = '';
+            if (currentView === 'docs' && currentSubKey) {
+                currentView = 'sub';
+                currentTitle = 'លិខិតបទដ្ឋានគតិយុត្ត';
+            } else {
+                currentView = 'main';
+                currentSubKey = null;
+                currentTitle = 'បណ្ដុំឯកសារវិស័យសង្គមកិច្ច';
+            }
             render();
         }
 
